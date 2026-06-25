@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>契約書管理</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #F7F8FA; --surface: #FFFFFF; --border: #E2E6EE;
+  --text: #1A1D23; --text-sub: #6B7280; --primary: #2563EB; --primary-hover: #1D4ED8; --red: #DC2626;
+  --alert-red-bg: #FEF2F2; --alert-red-text: #991B1B; --alert-red-border: #FCA5A5;
+  --alert-yellow-bg: #FFFBEB; --alert-yellow-text: #92400E; --alert-yellow-border: #FCD34D;
+  --alert-green-bg: #F0FDF4; --alert-green-text: #166534; --alert-green-border: #86EFAC;
+  --alert-gray-bg: #F3F4F6; --alert-gray-text: #374151; --alert-gray-border: #D1D5DB;
+}
+body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic', sans-serif; color: var(--text); min-height: 100vh; }
+.auth-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+.auth-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 40px; width: 100%; max-width: 400px; }
+.auth-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+.auth-sub { color: var(--text-sub); font-size: 14px; margin-bottom: 28px; }
+.header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 32px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+.header-title { font-size: 16px; font-weight: 700; }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.user-email { font-size: 13px; color: var(--text-sub); }
+.main { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+.toolbar-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.search-input { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 14px; width: 240px; outline: none; background: var(--surface); }
+.search-input:focus { border-color: var(--primary); }
+.filter-select { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 14px; outline: none; background: var(--surface); cursor: pointer; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; }
+.stat-label { font-size: 12px; color: var(--text-sub); margin-bottom: 4px; }
+.stat-value { font-size: 24px; font-weight: 700; }
+.stat-red .stat-value { color: var(--alert-red-text); }
+.stat-yellow .stat-value { color: var(--alert-yellow-text); }
+.stat-green .stat-value { color: var(--alert-green-text); }
+.table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { background: var(--bg); padding: 10px 16px; text-align: left; font-size: 12px; font-weight: 600; color: var(--text-sub); border-bottom: 1px solid var(--border); white-space: nowrap; }
+td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #FAFBFD; }
+.contract-name { font-weight: 600; }
+.vendor-name { color: var(--text-sub); font-size: 13px; margin-top: 2px; }
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid; white-space: nowrap; }
+.badge-red { background: var(--alert-red-bg); color: var(--alert-red-text); border-color: var(--alert-red-border); }
+.badge-yellow { background: var(--alert-yellow-bg); color: var(--alert-yellow-text); border-color: var(--alert-yellow-border); }
+.badge-green { background: var(--alert-green-bg); color: var(--alert-green-text); border-color: var(--alert-green-border); }
+.badge-gray { background: var(--alert-gray-bg); color: var(--alert-gray-text); border-color: var(--alert-gray-border); }
+.badge-none { background: var(--bg); color: var(--text-sub); border-color: var(--border); }
+.action-btn { background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 6px; font-size: 13px; color: var(--text-sub); transition: background 0.15s; }
+.action-btn:hover { background: var(--bg); color: var(--text); }
+.action-btn.danger:hover { background: var(--alert-red-bg); color: var(--red); }
+.link-btn { background: none; border: none; cursor: pointer; color: var(--primary); font-size: 13px; text-decoration: underline; padding: 0; }
+.btn { padding: 9px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: background 0.15s; }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-ghost { background: none; border: 1px solid var(--border); color: var(--text); }
+.btn-ghost:hover { background: var(--bg); }
+.btn-danger { background: var(--red); color: #fff; }
+.btn-danger:hover { background: #B91C1C; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.modal { background: var(--surface); border-radius: 12px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; }
+.modal-header { padding: 24px 24px 0; display: flex; align-items: center; justify-content: space-between; }
+.modal-title { font-size: 18px; font-weight: 700; }
+.modal-close { background: none; border: none; cursor: pointer; font-size: 20px; color: var(--text-sub); padding: 4px; }
+.modal-body { padding: 20px 24px 24px; }
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.form-label span { color: var(--red); margin-left: 2px; }
+.form-input, .form-textarea { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; font-size: 14px; outline: none; font-family: inherit; background: var(--surface); }
+.form-input:focus, .form-textarea:focus { border-color: var(--primary); }
+.form-textarea { resize: vertical; min-height: 80px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.modal-footer { display: flex; gap: 8px; justify-content: flex-end; padding-top: 4px; }
+.error-msg { color: var(--red); font-size: 13px; margin-top: 12px; }
+.empty { text-align: center; padding: 60px 24px; color: var(--text-sub); }
+.empty-icon { font-size: 40px; margin-bottom: 12px; }
+.loading { text-align: center; padding: 48px; color: var(--text-sub); font-size: 14px; }
+.days-left { font-size: 13px; color: var(--text-sub); }
+.days-over { color: var(--red); }
+@media (max-width: 768px) {
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .header { padding: 0 16px; }
+  .main { padding: 20px 16px; }
+  .search-input { width: 100%; }
+  th, td { padding: 10px 12px; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { createClient } = supabase;
+const SUPABASE_URL = 'https://plvzkxjstnmrcgzjkent.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsdnpreGpzdG5tcmNnemprZW50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNzYzODMsImV4cCI6MjA5Nzk1MjM4M30.0WQc4XTx6i305Ti75Vr4_qyIpq1S1JHupcHs-dBMUS8';
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function calcAlert(endDate) {
+  if (!endDate) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const end = new Date(endDate); end.setHours(0,0,0,0);
+  const diff = Math.floor((end - today) / 86400000);
+  if (diff < 0)   return { label: '⚫ 終了済み', cls: 'badge-gray', diff };
+  if (diff <= 60)  return { label: '🔴 2ヶ月以内', cls: 'badge-red', diff };
+  if (diff <= 120) return { label: '🟡 2〜4ヶ月', cls: 'badge-yellow', diff };
+  return { label: '🟢 4ヶ月以上', cls: 'badge-green', diff };
+}
+function formatDate(d) { return d ? d.replace(/-/g, '/') : '—'; }
+
+function AuthPage() {
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState('');
+  const [mode, setMode] = React.useState('login');
+  const handle = async (e) => {
+    e.preventDefault(); setLoading(true); setError('');
+    try {
+      if (mode === 'login') {
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      } else {
+        const { error } = await sb.auth.signUp({ email, password });
+        if (error) throw error;
+        setError('登録完了！そのままログインできます。');
+        setMode('login'); setLoading(false); return;
+      }
+    } catch (err) {
+      setError(err.message === 'Invalid login credentials' ? 'メールアドレスまたはパスワードが間違っています' : err.message);
+    }
+    setLoading(false);
+  };
+  return (
+    <div className="auth-wrap">
+      <div className="auth-card">
+        <div className="auth-title">📄 契約書管理</div>
+        <div className="auth-sub">{mode === 'login' ? 'ログインしてください' : 'アカウントを作成してください'}</div>
+        <form onSubmit={handle}>
+          <div className="form-group">
+            <label className="form-label">メールアドレス</label>
+            <input className="form-input" type="email" value={email} onChange={e=>setEmail(e.target.value)} required placeholder="user@carseven.jp" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">パスワード</label>
+            <input className="form-input" type="password" value={password} onChange={e=>setPassword(e.target.value)} required placeholder="6文字以上" />
+          </div>
+          {error && <div className="error-msg">{error}</div>}
+          <button className="btn btn-primary" type="submit" disabled={loading} style={{width:'100%',marginTop:'16px'}}>
+            {loading ? '処理中...' : mode === 'login' ? 'ログイン' : '登録する'}
+          </button>
+        </form>
+        <div style={{marginTop:'16px',textAlign:'center',fontSize:'13px',color:'var(--text-sub)'}}>
+          {mode === 'login'
+            ? <><span>アカウントがない方は</span><button className="link-btn" onClick={()=>{setMode('signup');setError('');}}>新規登録</button></>
+            : <><span>すでにアカウントをお持ちの方は</span><button className="link-btn" onClick={()=>{setMode('login');setError('');}}>ログイン</button></>
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ContractModal({ contract, onClose, onSaved }) {
+  const isEdit = !!contract?.id;
+  const [form, setForm] = React.useState({
+    contract_name: contract?.contract_name || '', vendor: contract?.vendor || '',
+    start_date: contract?.start_date || '', end_date: contract?.end_date || '',
+    bakuraku_url: contract?.bakuraku_url || '', memo: contract?.memo || '',
+  });
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState('');
+  const set = (k, v) => setForm(f => ({...f, [k]: v}));
+  const handleSave = async () => {
+    if (!form.contract_name.trim()) { setError('契約名は必須です'); return; }
+    if (!form.vendor.trim()) { setError('取引先は必須です'); return; }
+    setLoading(true); setError('');
+    const data = { contract_name: form.contract_name.trim(), vendor: form.vendor.trim(),
+      start_date: form.start_date || null, end_date: form.end_date || null,
+      bakuraku_url: form.bakuraku_url.trim() || null, memo: form.memo.trim() || null };
+    const { error } = isEdit
+      ? await sb.from('contracts').update(data).eq('id', contract.id)
+      : await sb.from('contracts').insert(data);
+    if (error) { setError(error.message); setLoading(false); return; }
+    onSaved();
+  };
+  return (
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <div className="modal-title">{isEdit ? '契約書を編集' : '契約書を登録'}</div>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          <div className="form-group"><label className="form-label">契約名<span>*</span></label><input className="form-input" value={form.contract_name} onChange={e=>set('contract_name',e.target.value)} placeholder="業務委託基本契約書 株式会社〇〇" /></div>
+          <div className="form-group"><label className="form-label">取引先<span>*</span></label><input className="form-input" value={form.vendor} onChange={e=>set('vendor',e.target.value)} placeholder="株式会社〇〇" /></div>
+          <div className="form-row">
+            <div className="form-group"><label className="form-label">契約開始日</label><input className="form-input" type="date" value={form.start_date} onChange={e=>set('start_date',e.target.value)} /></div>
+            <div className="form-group"><label className="form-label">契約終了日</label><input className="form-input" type="date" value={form.end_date} onChange={e=>set('end_date',e.target.value)} /></div>
+          </div>
+          <div className="form-group"><label className="form-label">バクラクURL</label><input className="form-input" value={form.bakuraku_url} onChange={e=>set('bakuraku_url',e.target.value)} placeholder="https://workflow.layerx.jp/requests/..." /></div>
+          <div className="form-group"><label className="form-label">メモ</label><textarea className="form-textarea" value={form.memo} onChange={e=>set('memo',e.target.value)} placeholder="備考など" /></div>
+          {error && <div className="error-msg">{error}</div>}
+          <div className="modal-footer">
+            <button className="btn btn-ghost" onClick={onClose}>キャンセル</button>
+            <button className="btn btn-primary" onClick={handleSave} disabled={loading}>{loading ? '保存中...' : '保存する'}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeleteConfirm({ contract, onClose, onDeleted }) {
+  const [loading, setLoading] = React.useState(false);
+  return (
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal" style={{maxWidth:'400px'}}>
+        <div className="modal-header"><div className="modal-title">削除の確認</div><button className="modal-close" onClick={onClose}>×</button></div>
+        <div className="modal-body">
+          <p style={{fontSize:'14px',lineHeight:'1.6'}}><strong>「{contract.contract_name}」</strong> を削除しますか？この操作は取り消せません。</p>
+          <div className="modal-footer" style={{marginTop:'20px'}}>
+            <button className="btn btn-ghost" onClick={onClose}>キャンセル</button>
+            <button className="btn btn-danger" disabled={loading} onClick={async()=>{setLoading(true);await sb.from('contracts').delete().eq('id',contract.id);onDeleted();}}>{loading?'削除中...':'削除する'}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [session, setSession] = React.useState(undefined);
+  const [contracts, setContracts] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [modal, setModal] = React.useState(null);
+  const [search, setSearch] = React.useState('');
+  const [filterAlert, setFilterAlert] = React.useState('all');
+
+  React.useEffect(() => {
+    sb.auth.getSession().then(({data:{session}}) => setSession(session));
+    const { data: { subscription } } = sb.auth.onAuthStateChange((_,s) => setSession(s));
+    return () => subscription.unsubscribe();
+  }, []);
+  React.useEffect(() => { if (session) loadContracts(); }, [session]);
+
+  const loadContracts = async () => {
+    setLoading(true);
+    const { data } = await sb.from('contracts').select('*').order('end_date', { ascending: true, nullsFirst: false });
+    setContracts(data || []); setLoading(false);
+  };
+
+  if (session === undefined) return <div className="loading">読み込み中...</div>;
+  if (!session) return <AuthPage />;
+
+  const filtered = contracts.filter(c => {
+    const alert = calcAlert(c.end_date);
+    const matchSearch = !search || c.contract_name.includes(search) || c.vendor.includes(search);
+    const matchFilter = filterAlert==='all'?true:filterAlert==='red'?alert?.label.includes('2ヶ月以内'):filterAlert==='yellow'?alert?.label.includes('2〜4ヶ月'):filterAlert==='green'?alert?.label.includes('4ヶ月以上'):filterAlert==='expired'?alert?.label.includes('終了済み'):filterAlert==='none'?!c.end_date:true;
+    return matchSearch && matchFilter;
+  });
+
+  const stats = {
+    red: contracts.filter(c=>calcAlert(c.end_date)?.label.includes('2ヶ月以内')).length,
+    yellow: contracts.filter(c=>calcAlert(c.end_date)?.label.includes('2〜4ヶ月')).length,
+    green: contracts.filter(c=>calcAlert(c.end_date)?.label.includes('4ヶ月以上')).length,
+    total: contracts.length,
+  };
+
+  return (
+    <>
+      <header className="header">
+        <div className="header-title">📄 契約書管理</div>
+        <div className="header-right">
+          <span className="user-email">{session.user.email}</span>
+          <button className="btn btn-ghost" style={{padding:'6px 14px',fontSize:'13px'}} onClick={()=>sb.auth.signOut()}>ログアウト</button>
+        </div>
+      </header>
+      <main className="main">
+        <div className="stats">
+          <div className="stat-card stat-red"><div className="stat-label">🔴 2ヶ月以内</div><div className="stat-value">{stats.red}</div></div>
+          <div className="stat-card stat-yellow"><div className="stat-label">🟡 2〜4ヶ月</div><div className="stat-value">{stats.yellow}</div></div>
+          <div className="stat-card stat-green"><div className="stat-label">🟢 4ヶ月以上</div><div className="stat-value">{stats.green}</div></div>
+          <div className="stat-card"><div className="stat-label">総契約数</div><div className="stat-value">{stats.total}</div></div>
+        </div>
+        <div className="toolbar">
+          <div className="toolbar-left">
+            <input className="search-input" placeholder="契約名・取引先で検索..." value={search} onChange={e=>setSearch(e.target.value)} />
+            <select className="filter-select" value={filterAlert} onChange={e=>setFilterAlert(e.target.value)}>
+              <option value="all">すべて</option>
+              <option value="red">🔴 2ヶ月以内</option>
+              <option value="yellow">🟡 2〜4ヶ月</option>
+              <option value="green">🟢 4ヶ月以上</option>
+              <option value="expired">⚫ 終了済み</option>
+              <option value="none">日付なし</option>
+            </select>
+          </div>
+          <button className="btn btn-primary" onClick={()=>setModal({type:'add'})}>＋ 契約書を登録</button>
+        </div>
+        <div className="table-wrap">
+          {loading ? <div className="loading">読み込み中...</div>
+          : filtered.length === 0 ? <div className="empty"><div className="empty-icon">📋</div><div>{search||filterAlert!=='all'?'該当する契約書がありません':'契約書を登録してください'}</div></div>
+          : <table>
+              <thead><tr><th>契約名 / 取引先</th><th>契約開始日</th><th>契約終了日</th><th>アラート</th><th>バクラク</th><th></th></tr></thead>
+              <tbody>
+                {filtered.map(c => {
+                  const alert = calcAlert(c.end_date);
+                  return (
+                    <tr key={c.id}>
+                      <td><div className="contract-name">{c.contract_name}</div><div className="vendor-name">{c.vendor}</div></td>
+                      <td>{formatDate(c.start_date)}</td>
+                      <td>{formatDate(c.end_date)}</td>
+                      <td>
+                        {alert?<span className={`badge ${alert.cls}`}>{alert.label}</span>:<span className="badge badge-none">日付なし</span>}
+                        {alert&&alert.diff>=0&&<div className="days-left">残り{alert.diff}日</div>}
+                        {alert&&alert.diff<0&&<div className="days-left days-over">{Math.abs(alert.diff)}日超過</div>}
+                      </td>
+                      <td>{c.bakuraku_url?<a href={c.bakuraku_url} target="_blank" rel="noopener noreferrer" style={{fontSize:'13px',color:'var(--primary)'}}>開く</a>:'—'}</td>
+                      <td style={{whiteSpace:'nowrap'}}>
+                        <button className="action-btn" onClick={()=>setModal({type:'edit',contract:c})}>編集</button>
+                        <button className="action-btn danger" onClick={()=>setModal({type:'delete',contract:c})}>削除</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>}
+        </div>
+      </main>
+      {modal?.type==='add'&&<ContractModal onClose={()=>setModal(null)} onSaved={()=>{setModal(null);loadContracts();}}/>}
+      {modal?.type==='edit'&&<ContractModal contract={modal.contract} onClose={()=>setModal(null)} onSaved={()=>{setModal(null);loadContracts();}}/>}
+      {modal?.type==='delete'&&<DeleteConfirm contract={modal.contract} onClose={()=>setModal(null)} onDeleted={()=>{setModal(null);loadContracts();}}/>}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
