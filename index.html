@@ -27,7 +27,7 @@ body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'H
 .header-title { font-size: 16px; font-weight: 700; }
 .header-right { display: flex; align-items: center; gap: 12px; }
 .user-email { font-size: 13px; color: var(--text-sub); }
-.main { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+.main { max-width: 1300px; margin: 0 auto; padding: 32px 24px; }
 .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
 .toolbar-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .search-input { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 14px; width: 240px; outline: none; background: var(--surface); }
@@ -171,9 +171,13 @@ function AuthPage() {
 function ContractModal({ contract, onClose, onSaved }) {
   const isEdit = !!contract?.id;
   const [form, setForm] = React.useState({
-    contract_name: contract?.contract_name || '', vendor: contract?.vendor || '',
-    start_date: contract?.start_date || '', end_date: contract?.end_date || '',
-    bakuraku_url: contract?.bakuraku_url || '', memo: contract?.memo || '',
+    contract_name: contract?.contract_name || '',
+    vendor: contract?.vendor || '',
+    assignee: contract?.assignee || '',
+    start_date: contract?.start_date || '',
+    end_date: contract?.end_date || '',
+    bakuraku_url: contract?.bakuraku_url || '',
+    memo: contract?.memo || '',
   });
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState('');
@@ -182,9 +186,15 @@ function ContractModal({ contract, onClose, onSaved }) {
     if (!form.contract_name.trim()) { setError('契約名は必須です'); return; }
     if (!form.vendor.trim()) { setError('取引先は必須です'); return; }
     setLoading(true); setError('');
-    const data = { contract_name: form.contract_name.trim(), vendor: form.vendor.trim(),
-      start_date: form.start_date || null, end_date: form.end_date || null,
-      bakuraku_url: form.bakuraku_url.trim() || null, memo: form.memo.trim() || null };
+    const data = {
+      contract_name: form.contract_name.trim(),
+      vendor: form.vendor.trim(),
+      assignee: form.assignee.trim() || null,
+      start_date: form.start_date || null,
+      end_date: form.end_date || null,
+      bakuraku_url: form.bakuraku_url.trim() || null,
+      memo: form.memo.trim() || null,
+    };
     const { error } = isEdit
       ? await sb.from('contracts').update(data).eq('id', contract.id)
       : await sb.from('contracts').insert(data);
@@ -201,6 +211,7 @@ function ContractModal({ contract, onClose, onSaved }) {
         <div className="modal-body">
           <div className="form-group"><label className="form-label">契約名<span>*</span></label><input className="form-input" value={form.contract_name} onChange={e=>set('contract_name',e.target.value)} placeholder="業務委託基本契約書 株式会社〇〇" /></div>
           <div className="form-group"><label className="form-label">取引先<span>*</span></label><input className="form-input" value={form.vendor} onChange={e=>set('vendor',e.target.value)} placeholder="株式会社〇〇" /></div>
+          <div className="form-group"><label className="form-label">担当者</label><input className="form-input" value={form.assignee} onChange={e=>set('assignee',e.target.value)} placeholder="津國 由莉子" /></div>
           <div className="form-row">
             <div className="form-group"><label className="form-label">契約開始日</label><input className="form-input" type="date" value={form.start_date} onChange={e=>set('start_date',e.target.value)} /></div>
             <div className="form-group"><label className="form-label">契約終了日</label><input className="form-input" type="date" value={form.end_date} onChange={e=>set('end_date',e.target.value)} /></div>
@@ -262,7 +273,7 @@ function App() {
 
   const filtered = contracts.filter(c => {
     const alert = calcAlert(c.end_date);
-    const matchSearch = !search || c.contract_name.includes(search) || c.vendor.includes(search);
+    const matchSearch = !search || c.contract_name.includes(search) || c.vendor.includes(search) || (c.assignee||'').includes(search);
     const matchFilter = filterAlert==='all'?true:filterAlert==='red'?alert?.label.includes('2ヶ月以内'):filterAlert==='yellow'?alert?.label.includes('2〜4ヶ月'):filterAlert==='green'?alert?.label.includes('4ヶ月以上'):filterAlert==='expired'?alert?.label.includes('終了済み'):filterAlert==='none'?!c.end_date:true;
     return matchSearch && matchFilter;
   });
@@ -292,7 +303,7 @@ function App() {
         </div>
         <div className="toolbar">
           <div className="toolbar-left">
-            <input className="search-input" placeholder="契約名・取引先で検索..." value={search} onChange={e=>setSearch(e.target.value)} />
+            <input className="search-input" placeholder="契約名・取引先・担当者で検索..." value={search} onChange={e=>setSearch(e.target.value)} />
             <select className="filter-select" value={filterAlert} onChange={e=>setFilterAlert(e.target.value)}>
               <option value="all">すべて</option>
               <option value="red">🔴 2ヶ月以内</option>
@@ -308,13 +319,14 @@ function App() {
           {loading ? <div className="loading">読み込み中...</div>
           : filtered.length === 0 ? <div className="empty"><div className="empty-icon">📋</div><div>{search||filterAlert!=='all'?'該当する契約書がありません':'契約書を登録してください'}</div></div>
           : <table>
-              <thead><tr><th>契約名 / 取引先</th><th>契約開始日</th><th>契約終了日</th><th>アラート</th><th>バクラク</th><th></th></tr></thead>
+              <thead><tr><th>契約名 / 取引先</th><th>担当者</th><th>契約開始日</th><th>契約終了日</th><th>アラート</th><th>バクラク</th><th></th></tr></thead>
               <tbody>
                 {filtered.map(c => {
                   const alert = calcAlert(c.end_date);
                   return (
                     <tr key={c.id}>
                       <td><div className="contract-name">{c.contract_name}</div><div className="vendor-name">{c.vendor}</div></td>
+                      <td style={{fontSize:'13px'}}>{c.assignee || '—'}</td>
                       <td>{formatDate(c.start_date)}</td>
                       <td>{formatDate(c.end_date)}</td>
                       <td>
