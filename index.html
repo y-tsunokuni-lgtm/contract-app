@@ -264,7 +264,10 @@ function App() {
 
   const loadContracts = async () => {
     setLoading(true);
-    const { data } = await sb.from('contracts').select('*').order('end_date', { ascending: true, nullsFirst: false });
+const today = new Date().toISOString().split('T')[0];
+const { data: active } = await sb.from('contracts').select('*').filter('end_date', 'gte', today).order('end_date', { ascending: true });
+const { data: expired } = await sb.from('contracts').select('*').filter('end_date', 'lt', today).order('end_date', { ascending: false });
+const data = [...(active||[]), ...(expired||[])];
     setContracts(data || []); setLoading(false);
   };
 
