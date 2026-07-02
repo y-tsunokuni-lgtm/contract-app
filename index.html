@@ -102,6 +102,7 @@ const { createClient } = supabase;
 const SUPABASE_URL = 'https://plvzkxjstnmrcgzjkent.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsdnpreGpzdG5tcmNnemprZW50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNzYzODMsImV4cCI6MjA5Nzk1MjM4M30.0WQc4XTx6i305Ti75Vr4_qyIpq1S1JHupcHs-dBMUS8';
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const VIEWER_EMAILS = ['car7-mst@carseven.jp'];
 
 function calcAlert(endDate) {
   if (!endDate) return null;
@@ -187,12 +188,9 @@ function ContractModal({ contract, onClose, onSaved }) {
     if (!form.vendor.trim()) { setError('取引先は必須です'); return; }
     setLoading(true); setError('');
     const data = {
-      contract_name: form.contract_name.trim(),
-      vendor: form.vendor.trim(),
-      assignee: form.assignee.trim() || null,
-      start_date: form.start_date || null,
-      end_date: form.end_date || null,
-      bakuraku_url: form.bakuraku_url.trim() || null,
+      contract_name: form.contract_name.trim(), vendor: form.vendor.trim(),
+      assignee: form.assignee.trim() || null, start_date: form.start_date || null,
+      end_date: form.end_date || null, bakuraku_url: form.bakuraku_url.trim() || null,
       memo: form.memo.trim() || null,
     };
     const { error } = isEdit
@@ -264,14 +262,17 @@ function App() {
 
   const loadContracts = async () => {
     setLoading(true);
-const today = new Date().toISOString().split('T')[0];
-const { data: active } = await sb.from('contracts').select('*').filter('end_date', 'gte', today).order('end_date', { ascending: true });
-const { data: expired } = await sb.from('contracts').select('*').filter('end_date', 'lt', today).order('end_date', { ascending: false });
-const data = [...(active||[]), ...(expired||[])];
-    setContracts(data || []); setLoading(false);
+    const today = new Date().toISOString().split('T')[0];
+    const { data: active } = await sb.from('contracts').select('*').filter('end_date', 'gte', today).order('end_date', { ascending: true });
+    const { data: expired } = await sb.from('contracts').select('*').filter('end_date', 'lt', today).order('end_date', { ascending: false });
+    setContracts([...(active||[]), ...(expired||[])]);
+    setLoading(false);
   };
 
-const isViewer = session.user.email === 'car7-mst@carseven.jp';
+  if (session === undefined) return <div className="loading">読み込み中...</div>;
+  if (!session) return <AuthPage />;
+
+  const isViewer = VIEWER_EMAILS.includes(session.user.email);
 
   const filtered = contracts.filter(c => {
     const alert = calcAlert(c.end_date);
@@ -321,7 +322,7 @@ const isViewer = session.user.email === 'car7-mst@carseven.jp';
           {loading ? <div className="loading">読み込み中...</div>
           : filtered.length === 0 ? <div className="empty"><div className="empty-icon">📋</div><div>{search||filterAlert!=='all'?'該当する契約書がありません':'契約書を登録してください'}</div></div>
           : <table>
-              <thead><tr><th>契約名 / 取引先</th><th>担当者</th><th>契約開始日</th><th>契約終了日</th><th>アラート</th><th>バクラク</th><th></th></tr></thead>
+              <thead><tr><th>契約名 / 取引先</th><th>担当者</th><th>契約開始日</th><th>契約終了日</th><th>アラート</th><th>バクラク</th>{!isViewer&&<th></th>}</tr></thead>
               <tbody>
                 {filtered.map(c => {
                   const alert = calcAlert(c.end_date);
@@ -337,10 +338,10 @@ const isViewer = session.user.email === 'car7-mst@carseven.jp';
                         {alert&&alert.diff<0&&<div className="days-left days-over">{Math.abs(alert.diff)}日超過</div>}
                       </td>
                       <td>{c.bakuraku_url?<a href={c.bakuraku_url} target="_blank" rel="noopener noreferrer" style={{fontSize:'13px',color:'var(--primary)'}}>開く</a>:'—'}</td>
-                     <td style={{whiteSpace:'nowrap'}}>
-  {!isViewer && <button className="action-btn" onClick={()=>setModal({type:'edit',contract:c})}>編集</button>}
-  {!isViewer && <button className="action-btn danger" onClick={()=>setModal({type:'delete',contract:c})}>削除</button>}
-</td>
+                      {!isViewer&&<td style={{whiteSpace:'nowrap'}}>
+                        <button className="action-btn" onClick={()=>setModal({type:'edit',contract:c})}>編集</button>
+                        <button className="action-btn danger" onClick={()=>setModal({type:'delete',contract:c})}>削除</button>
+                      </td>}
                     </tr>
                   );
                 })}
