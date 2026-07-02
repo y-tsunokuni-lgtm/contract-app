@@ -271,8 +271,7 @@ const data = [...(active||[]), ...(expired||[])];
     setContracts(data || []); setLoading(false);
   };
 
-  if (session === undefined) return <div className="loading">読み込み中...</div>;
-  if (!session) return <AuthPage />;
+const isViewer = session.user.email === 'car7-mst@carseven.jp';
 
   const filtered = contracts.filter(c => {
     const alert = calcAlert(c.end_date);
@@ -316,7 +315,7 @@ const data = [...(active||[]), ...(expired||[])];
               <option value="none">日付なし</option>
             </select>
           </div>
-          <button className="btn btn-primary" onClick={()=>setModal({type:'add'})}>＋ 契約書を登録</button>
+          {!isViewer && <button className="btn btn-primary" onClick={()=>setModal({type:'add'})}>＋ 契約書を登録</button>}
         </div>
         <div className="table-wrap">
           {loading ? <div className="loading">読み込み中...</div>
@@ -338,10 +337,10 @@ const data = [...(active||[]), ...(expired||[])];
                         {alert&&alert.diff<0&&<div className="days-left days-over">{Math.abs(alert.diff)}日超過</div>}
                       </td>
                       <td>{c.bakuraku_url?<a href={c.bakuraku_url} target="_blank" rel="noopener noreferrer" style={{fontSize:'13px',color:'var(--primary)'}}>開く</a>:'—'}</td>
-                      <td style={{whiteSpace:'nowrap'}}>
-                        <button className="action-btn" onClick={()=>setModal({type:'edit',contract:c})}>編集</button>
-                        <button className="action-btn danger" onClick={()=>setModal({type:'delete',contract:c})}>削除</button>
-                      </td>
+                     <td style={{whiteSpace:'nowrap'}}>
+  {!isViewer && <button className="action-btn" onClick={()=>setModal({type:'edit',contract:c})}>編集</button>}
+  {!isViewer && <button className="action-btn danger" onClick={()=>setModal({type:'delete',contract:c})}>削除</button>}
+</td>
                     </tr>
                   );
                 })}
