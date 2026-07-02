@@ -135,7 +135,7 @@ function AuthPage() {
         setMode('login'); setLoading(false); return;
       }
     } catch (err) {
-      setError(err.message === 'Invalid login credentials' ? 'メールアドレスまたはパスワードが間違っています' : err.message);
+     setError(err.message || JSON.stringify(err));
     }
     setLoading(false);
   };
